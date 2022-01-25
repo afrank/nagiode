@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup
 import pytz
 import datetime
 from requests.packages.urllib3.exceptions import InsecureRequestWarning
+import re
 
 from nagiode.cmdtyp import CmdTyp, CommandArguments, ArgumentDefaults
 
@@ -107,3 +108,23 @@ class Nagios:
 
             i+=7
         return status
+    def log(self, filterby=".*ALERT.*", since_sec=300):
+        """
+        Output the nagios logfile
+        """
+
+        log_line = re.compile(f"<img[^>]+>\[([^\]]+)\]({filterby})<br[^>]*>")
+
+        output = []
+
+        now = datetime.datetime.now()
+
+        result = requests.get(f"{self.base_uri}/showlog.cgi", verify=False, auth=self.auth).text
+        lines = result.split("\n")
+        for line in lines:
+            ret = log_line.match(line)
+            if ret:
+                ts = datetime.datetime.strptime(ret.group(1), '%Y-%m-%d %H:%M:%S')
+                if (now-ts).seconds < since_sec or not since_sec:
+                    output += [ ( ts, ret.group(2).strip(), ret.group(0) ) ]
+        return output

@@ -27,12 +27,17 @@ def main():
     parser.add_argument("-s", "--status", help="Get Host status. Requires -a host=<host>", action="store_true", default=False)
     parser.add_argument("-G", "--cgi", help="Nagios CGI Path", default=os.environ.get("NAGIOS_CGI"))
     parser.add_argument("-d", "--debug", help="Print url and args and exit without executing", action="store_true", default=False)
+    parser.add_argument("-L", "--log", help="Show Nagios log", action="store_true", default=False)
+    parser.add_argument("-S", "--since", help="Show n seconds of recent log", default=0)
 
     args = parser.parse_args()
 
     nagios = Nagios(args.host, args.username, args.password, cgi_path=args.cgi, debug=args.debug)
 
-    if args.command and args.list:
+    if args.log:
+        for line in nagios.log(".*ALERT.*", int(args.since)):
+            print(f"[%s] %s" % (line[0].strftime("%Y-%m-%d %H:%M:%S"), line[1]))
+    elif args.command and args.list:
         print(json.dumps(nagios.list_arguments(args.command)))
     elif args.list:
         print(json.dumps(nagios.list_commands()))
